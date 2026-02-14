@@ -101,7 +101,8 @@ async function sendMessage() {
 		let buffer = "";
 		const flushAssistantText = () => {
 			assistantTextEl.textContent = responseText;
-			chatMessages.scrollTop = chatMessages.scrollHeight;
+			const chatArea = document.querySelector('.chat-area');
+			chatArea.scrollTop = chatArea.scrollHeight;
 		};
 
 		let sawDone = false;
@@ -205,7 +206,8 @@ function addMessageToChat(role, content) {
 	chatMessages.appendChild(messageEl);
 
 	// Scroll to bottom
-	chatMessages.scrollTop = chatMessages.scrollHeight;
+	const chatArea = document.querySelector('.chat-area');
+	chatArea.scrollTop = chatArea.scrollHeight;
 }
 
 function consumeSseEvents(buffer) {
