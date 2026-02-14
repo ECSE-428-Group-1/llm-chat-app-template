@@ -1,0 +1,286 @@
+:root {
+    --bg-dark: #373d49;
+    /* Main top/bottom background */
+    --sidebar-bg: #454d59;
+    /* Sidebar background */
+    --chat-content-bg: #adc1cc;
+    /* Light blue-grey chat area */
+    --text-main: #ffffff;
+    /* White text for dark areas */
+    --text-dark: #373d49;
+    /* Dark text for light chat area */
+    --text-muted: #b0b8c4;
+    /* Dimmed text for history/links */
+    --input-bg: #adc1cc;
+    /* Matching input bar color */
+    --button-bg: #454d59;
+    /* Dark button/arrow background */
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    overflow: hidden;
+}
+
+/* --- Top Navigation --- */
+.top-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 3rem;
+    background-color: var(--bg-dark);
+}
+
+.logo {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+}
+
+.nav-links a {
+    margin-left: 2rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 1.1rem;
+}
+
+/* --- Main Layout --- */
+.main-wrapper {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* --- Sidebar --- */
+.sidebar {
+    width: 280px;
+    background-color: var(--sidebar-bg);
+    padding: 1rem;
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+}
+
+.history-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    /* Space between buttons */
+}
+
+.history-list li {
+    margin-bottom: 0;
+}
+
+.history-list a {
+    display: block;
+    /* Makes the whole area clickable */
+    padding: 0.8rem 1rem;
+    color: var(--text-main);
+    text-decoration: none;
+    /* Remove the underline */
+    font-size: 1rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    /* Subtle background */
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+/* Hover state the button lights up */
+.history-list a:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateX(4px);
+    /* Slight nudge to the right */
+}
+
+/* Active/Selected state to show which chat is open */
+.history-list li.active a {
+    background-color: var(--bg-dark);
+    border-color: var(--primary-color);
+}
+
+.new-chat-btn {
+    width: 100%;
+    /* Spans the full width of the sidebar */
+    padding: 12px 16px;
+    /* Vertical and horizontal breathing room */
+    margin-bottom: 1rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    display: flex;
+    /* Allows us to align content */
+    align-items: center;
+    /* Centers text vertically */
+    justify-content: flex-start;
+    /* Aligns text to the left side */
+    gap: 12px;
+    /* Space between the + and the text */
+    transition: background-color 0.2s;
+}
+
+.new-chat-btn:hover {
+    border-color: white;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* --- Chat Area --- */
+.chat-area {
+    flex: 1;
+    background-color: var(--chat-content-bg);
+    display: flex;
+    flex-direction: column;
+    padding: 3rem 3rem 1rem 3rem;
+    overflow-y: auto;
+    color: var(--text-dark);
+}
+
+.chat-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    /* Adds space between the bubbles */
+}
+
+.message {
+    padding: 1rem 1.5rem;
+    border-radius: 20px;
+    max-width: 80%;
+    font-size: 1.2rem;
+    line-height: 1.4;
+}
+
+/* User bubbles go to the right */
+.user-message {
+    align-self: flex-end;
+    background-color: #2b313b;
+    /* Darker slate */
+    color: white;
+    border-bottom-right-radius: 4px;
+    /* Gives it a "tail" */
+}
+
+/* AI bubbles stay on the left */
+.assistant-message {
+    align-self: flex-start;
+    background-color: #f0f4f8;
+    /* Light grey */
+    color: var(--text-dark);
+    border-bottom-left-radius: 4px;
+    /* Gives it a "tail" */
+}
+
+.message p {
+    margin-bottom: 1.5rem;
+}
+
+.message a {
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+/* --- Bottom Input Section --- */
+.message-input {
+    background-color: var(--bg-dark);
+    padding: 1.5rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    z-index: 10;
+    /* Keep it above the scroll area */
+}
+
+.input-pill {
+    display: flex;
+    align-items: center;
+    background-color: var(--input-bg);
+    border-radius: 50px;
+    width: 90%;
+    max-width: 1100px;
+    padding: 0.5rem 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+#user-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 1rem 1.5rem;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    outline: none;
+    resize: none;
+}
+
+#user-input::placeholder {
+    color: #5a6575;
+}
+
+#send-button {
+    background-color: var(--button-bg);
+    color: var(--text-muted);
+    border: none;
+    width: 100px;
+    height: 40px;
+    border-radius: 30px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.2s;
+}
+
+#send-button:hover {
+    opacity: 0.8;
+}
+
+.arrow-up {
+    font-size: 2rem;
+    font-weight: 200;
+}
+
+.disclaimer {
+    margin-top: 1.5rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    max-width: 90%;
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* Typing Indicator (Hidden by default) */
+.typing-indicator {
+    display: none;
+    margin-bottom: 1rem;
+    font-style: italic;
+    color: var(--text-dark);
+}
+
+.typing-indicator.visible {
+    display: block;
+}
