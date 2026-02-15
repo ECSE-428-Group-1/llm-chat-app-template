@@ -8,6 +8,8 @@
  * @license MIT
  */
 import { Env, ChatMessage } from "./types";
+import { generateSessionToken, verifySessionToken } from "./sessionToken";
+import { checkRateLimit } from "./rateLimit";
 
 // Model ID for Workers AI model
 // https://developers.cloudflare.com/workers-ai/models/
@@ -34,7 +36,34 @@ export default {
 		}
 
 		// API Routes
-		if (url.pathname === "/api/chat") {
+		if (url.pathname === "/api/session-token/generate") {
+			if (request.method === 'GET') {
+				const oldToken = request.headers.get('Session-Token') || '';
+				const token = generateSessionToken(oldToken);
+				return new Response(
+					JSON.stringify({ token }),
+					{
+						headers: { "content-type": "application/json" },
+					},
+				);
+			}
+		}
+
+		else if (url.pathname === "/api/chat") {
+			const token = request.headers.get('Session-Token') || '';
+			const isValidSession = await verifySessionToken(token, env);
+			if (!isValidSession) {
+				return new Response("Invalid session token", { status: 401 });
+			}
+
+			const isRateLimited = await checkRateLimit(
+				token,
+				env
+			);
+			if (isRateLimited) {
+				return new Response("Too many requests", { status: 429 });
+			}
+
 			// Handle POST requests for chat
 			if (request.method === "POST") {
 				return handleChatRequest(request, env);
@@ -66,23 +95,41 @@ async function handleChatRequest(
 		if (!messages.some((msg) => msg.role === "system")) {
 			messages.unshift({ role: "system", content: SYSTEM_PROMPT });
 		}
-
-		const stream = await env.AI.run(
-			MODEL_ID,
-			{
-				messages,
-				max_tokens: 1024,
-				stream: true,
-			},
-			{
-				// Uncomment to use AI Gateway
-				// gateway: {
-				//   id: "YOUR_GATEWAY_ID", // Replace with your AI Gateway ID
-				//   skipCache: false,      // Set to true to bypass cache
-				//   cacheTtl: 3600,        // Cache time-to-live in seconds
-				// },
-			},
-		);
+		let stream;
+		if (env.ENVIRONMENT === 'production') {
+			stream = await env.AI.run(
+				MODEL_ID,
+				{
+					messages,
+					max_tokens: 1024,
+					stream: true,
+				},
+				{
+					// Uncomment to use AI Gateway
+					// gateway: {
+					//   id: "YOUR_GATEWAY_ID", // Replace with your AI Gateway ID
+					//   skipCache: false,      // Set to true to bypass cache
+					//   cacheTtl: 3600,        // Cache time-to-live in seconds
+					// },
+				},
+			);
+		} else if (env.ENVIRONMENT === 'development') {
+			// Mock stream for local development
+			stream = new ReadableStream<any>({
+				async start(controller) {
+					const encoder = new TextEncoder();
+					// Send multiple SSE messages
+					controller.enqueue(encoder.encode("data: {\"response\": \"Hello from custom stream\"}\n\n"));
+					await new Promise(resolve => setTimeout(resolve, 1000));
+					controller.enqueue(encoder.encode("data: {\"response\": \" Testing setup locally\"}\n\n"));
+					await new Promise(resolve => setTimeout(resolve, 1000));
+					controller.enqueue(encoder.encode("data: {\"response\": \". Done!\"}\n\n"));
+					await new Promise(resolve => setTimeout(resolve, 1000));
+					controller.enqueue(encoder.encode("[DONE]"));
+					controller.close();
+				},
+			});
+		}
 
 		return new Response(stream, {
 			headers: {
