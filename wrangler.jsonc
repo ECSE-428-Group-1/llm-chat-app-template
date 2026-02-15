@@ -26,7 +26,29 @@
 		"binding": "AI"
 	},
 	"vars": {
-		"ENVIRONMENT": "development"
+		"ENVIRONMENT": "production",
 	},
+	"env": {
+		"dev": {
+			"vars": {
+				"ENVIRONMENT": "development",
+			},
+			"ratelimits": [
+				{
+					"name": "NASAQ_RATE_LIMIT",
+					"namespace_id": "1001",
+					"simple": {"limit": 10, "period": 60}
+				}
+			 ],
+			"ai": {
+				"binding": "AI"
+			},
+			"assets": {
+				"binding": "ASSETS",
+				"directory": "./public"
+			},
+		}
+	},
+
 	"upload_source_maps": true
 }
