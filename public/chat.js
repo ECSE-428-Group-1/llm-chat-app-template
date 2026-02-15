@@ -9,7 +9,6 @@ const chatMessages = document.getElementById("chat-messages");
 const userInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
-const currentToken = localStorage.getItem('sessionToken') || "";
 
 // Chat state
 let chatHistory = [
@@ -43,7 +42,7 @@ async function updateAndSetToken() {
 	const response = await fetch("/api/session-token/generate", {
 		method: "GET",
 		headers: {
-			'Session-Token': currentToken,
+			'Session-Token': localStorage.getItem('sessionToken') || '',
 		}
 	});
 	if (!response.ok) {
@@ -72,7 +71,7 @@ async function startResponseStream() {
  */
 async function sendMessage() {
 	const message = userInput.value.trim();
-	if (currentToken === '') {
+	if (!localStorage.getItem("sessionToken")) {
 		try {
 			await updateAndSetToken();
 		} catch (error) {
