@@ -9,6 +9,7 @@ const chatMessages = document.getElementById("chat-messages");
 const userInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
+const currentToken = localStorage.getItem('sessionToken') || "";
 
 // Chat state
 let chatHistory = [
@@ -37,12 +38,52 @@ userInput.addEventListener("keydown", function (e) {
 // Send button click handler
 sendButton.addEventListener("click", sendMessage);
 
+// Requests for a new token and updates it in localStorage
+async function updateAndSetToken() {
+	const response = await fetch("/api/session-token/generate", {
+		method: "GET",
+		headers: {
+			'Session-Token': currentToken,
+		}
+	});
+	if (!response.ok) {
+		throw new Error("Failed to get session token");
+	}
+	const token = (await response.json())['token'];
+	localStorage.setItem("sessionToken", token);
+	return token;
+}
+
+async function startResponseStream() {
+	return await fetch("/api/chat", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"Session-Token": localStorage.getItem("sessionToken") || "",
+		},
+		body: JSON.stringify({
+			messages: chatHistory,
+		}),
+	});
+}
+
 /**
  * Sends a message to the chat API and processes the response
  */
 async function sendMessage() {
 	const message = userInput.value.trim();
-
+	if (currentToken === '') {
+		try {
+			await updateAndSetToken();
+		} catch (error) {
+			console.error("Error getting session token:", error);
+			addMessageToChat(
+				"assistant",
+				"Sorry, there was an error initializing the chat session.",
+			);
+			return;
+		}
+	}
 	// Don't send empty messages
 	if (message === "" || isProcessing) return;
 
@@ -76,15 +117,12 @@ async function sendMessage() {
 		chatMessages.scrollTop = chatMessages.scrollHeight;
 
 		// Send request to API
-		const response = await fetch("/api/chat", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				messages: chatHistory,
-			}),
-		});
+		let response = await startResponseStream();
+		if (response.status === 401) {
+			// retry logic for unauthorized error -> try refreshing token
+			await updateAndSetToken();
+			response = await startResponseStream();
+		}
 
 		// Handle errors
 		if (!response.ok) {
