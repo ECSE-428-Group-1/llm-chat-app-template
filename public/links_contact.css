@@ -1,0 +1,87 @@
+/* --- Links/Contact Page Specific Styles --- */
+
+/* The bar directly under your Nav */
+.utility-bar {
+    background-color: var(--sidebar-bg);
+    padding: 0.8rem 3rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* The Return Button */
+.btn-return {
+    padding: 0.6rem 1.2rem;
+    text-decoration: none;
+    background-color: rgba(255, 255, 255, 0.05);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    transition: background-color 0.2s;
+}
+
+.btn-return:hover {
+    opacity: 0.8;
+}
+
+/* Container for the documentation list */
+.content-card {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.content-card h1 {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    color: var(--bg-dark);
+}
+
+.content-card h2 {
+    margin-bottom: 1rem;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+    padding-bottom: 0.5rem;
+    color: var(--bg-dark);
+}
+
+/* The individual link "Rows" */
+.resource-item {
+    background: rgba(255, 255, 255, 0.4);
+    margin-bottom: 0.8rem;
+    padding: 1.2rem;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: transform 0.2s;
+}
+
+.resource-item:hover {
+    transform: translateX(5px);
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.resource-info h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.2rem;
+    color: var(--text-dark);
+}
+
+.resource-info p {
+    font-size: 0.9rem;
+    color: #5a6575;
+}
+
+/* The button on the right side of each link */
+.link-tag {
+    background: var(--button-bg);
+    color: white;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: 0.85rem;
+}
