@@ -161,7 +161,7 @@ body {
 .chat-messages {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 2rem;
     /* Adds space between the bubbles */
 }
 
@@ -171,6 +171,7 @@ body {
     max-width: 80%;
     font-size: 1.2rem;
     line-height: 1.4;
+    position: relative;
 }
 
 /* User bubbles go to the right */
@@ -283,4 +284,45 @@ body {
 
 .typing-indicator.visible {
     display: block;
+}
+
+/* Copy button inside message bubbles (hidden until hover) */
+.copy-btn {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 10px;
+    left: auto;
+    background: rgba(0, 0, 0, 0.06);
+    border: none;
+    color: var(--text-dark);
+    padding: 6px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    font-size: 0.9rem;
+}
+
+.message:hover .copy-btn {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Align the copy button to the side closer to the center */
+.assistant-message .copy-btn {
+    /* assistant messages are left-aligned; button should be on right side (toward center) */
+    right: 10px;
+    left: auto;
+}
+
+.user-message .copy-btn {
+    /* user messages are right-aligned; button should be on left side (toward center) */
+    left: 10px;
+    right: auto;
+}
+
+.copy-btn.copied {
+    background: #2b313b;
+    color: #fff;
 }

@@ -110,6 +110,7 @@ async function sendMessage() {
 		assistantMessageEl.className = "message assistant-message";
 		assistantMessageEl.innerHTML = "<p></p>";
 		chatMessages.appendChild(assistantMessageEl);
+		attachCopyButton(assistantMessageEl);
 		const assistantTextEl = assistantMessageEl.querySelector("p");
 
 		// Scroll to bottom
@@ -241,10 +242,50 @@ function addMessageToChat(role, content) {
 	messageEl.className = `message ${role}-message`;
 	messageEl.innerHTML = `<p>${content}</p>`;
 	chatMessages.appendChild(messageEl);
+	attachCopyButton(messageEl);
 
 	// Scroll to bottom
 	const chatArea = document.querySelector('.chat-area');
 	chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+/**
+ * Attach a copy button to a message element (if not already present)
+ */
+function attachCopyButton(messageEl) {
+	if (!messageEl || messageEl.querySelector('.copy-btn')) return;
+	const btn = document.createElement('button');
+	btn.type = 'button';
+	btn.className = 'copy-btn';
+	btn.title = 'Copy message';
+	btn.innerText = '⮺';
+
+	btn.addEventListener('click', async (e) => {
+		e.stopPropagation();
+		const p = messageEl.querySelector('p');
+		const text = p ? p.textContent.trim() : '';
+		try {
+			await navigator.clipboard.writeText(text);
+			btn.innerText = 'Copied';
+			btn.classList.add('copied');
+			setTimeout(() => {
+				btn.innerText = '⮺';
+				btn.classList.remove('copied');
+			}, 1500);
+		} catch (err) {
+			console.error('Copy failed', err);
+			btn.innerText = 'Failed';
+			setTimeout(() => { btn.innerText = '⮺'; }, 1500);
+		}
+	});
+
+	messageEl.appendChild(btn);
+}
+
+/** Attach copy buttons to any existing static messages on the page */
+function attachCopyButtonsToExistingMessages() {
+	const messages = document.querySelectorAll('.message');
+	messages.forEach(attachCopyButton);
 }
 
 function consumeSseEvents(buffer) {
@@ -267,3 +308,6 @@ function consumeSseEvents(buffer) {
 	}
 	return { events, buffer: normalized };
 }
+
+// Attach copy buttons to any messages already present on load
+attachCopyButtonsToExistingMessages();
