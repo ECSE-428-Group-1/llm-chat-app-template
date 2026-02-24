@@ -9,15 +9,9 @@
  */
 import { Env, ChatMessage } from "./types";
 import { generateSessionToken, verifySessionToken } from "./sessionToken";
+import generate_answer from "./ai_with_tool";
 import { checkRateLimit } from "./rateLimit";
 
-// Model ID for Workers AI model
-// https://developers.cloudflare.com/workers-ai/models/
-const MODEL_ID = "@cf/meta/llama-3.1-8b-instruct-fp8";
-
-// Default system prompt
-const SYSTEM_PROMPT =
-	"You are a helpful, friendly assistant. Provide concise and accurate responses.";
 
 export default {
 	/**
@@ -91,28 +85,10 @@ async function handleChatRequest(
 			messages: ChatMessage[];
 		};
 
-		// Add system prompt if not present
-		if (!messages.some((msg) => msg.role === "system")) {
-			messages.unshift({ role: "system", content: SYSTEM_PROMPT });
-		}
+
 		let stream;
 		if (env.ENVIRONMENT === 'production') {
-			stream = await env.AI.run(
-				MODEL_ID,
-				{
-					messages,
-					max_tokens: 1024,
-					stream: true,
-				},
-				{
-					// Uncomment to use AI Gateway
-					// gateway: {
-					//   id: "YOUR_GATEWAY_ID", // Replace with your AI Gateway ID
-					//   skipCache: false,      // Set to true to bypass cache
-					//   cacheTtl: 3600,        // Cache time-to-live in seconds
-					// },
-				},
-			);
+			stream = await generate_answer(messages);
 		} else if (env.ENVIRONMENT === 'development') {
 			// Mock stream for local development
 			stream = new ReadableStream<any>({
