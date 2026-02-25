@@ -9,26 +9,6 @@
     <link rel="stylesheet" href="links_contact.css">
 </head>
 
-<script>
-document.querySelectorAll(".link-tag").forEach(link => {
-
-    let clicked = false;
-
-    link.addEventListener("click", function (event) {
-        if (clicked) {
-            event.preventDefault();
-            return;
-        }
-
-        clicked = true;
-
-        link.style.pointerEvents = "none";
-        link.style.opacity = "0.6";
-
-    });
-});
-</script>
-
 <body>
     <nav class="top-nav">
         <div class="brand-container">
@@ -93,7 +73,7 @@ document.querySelectorAll(".link-tag").forEach(link => {
 
                     <div class="resource-item">
                         <div class="resource-info">
-                            <h3>Workers’ Compensation Board – Alberta</h3>
+                            <h3>Workers' Compensation Board – Alberta</h3>
                             <p>Information regarding disability insurance and workplace injuries.</p>
                         </div>
                         <a href="https://www.wcb.ab.ca/" target="_blank" class="link-tag">Visit Site</a>
@@ -135,6 +115,21 @@ document.querySelectorAll(".link-tag").forEach(link => {
         </div>
     </main>
 
+    <script>
+    document.querySelectorAll(".link-tag").forEach(link => {
+        let clicked = false;
+        link.addEventListener("click", function (event) {
+            if (clicked) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                return;
+            }
+            clicked = true;
+            link.style.pointerEvents = "none";
+            link.style.opacity = "0.6";
+        }, true);
+    });
+    </script>
 </body>
 
 </html>
