@@ -9,6 +9,26 @@
     <link rel="stylesheet" href="links_contact.css">
 </head>
 
+<script>
+document.querySelectorAll(".link-tag").forEach(link => {
+
+    let clicked = false;
+
+    link.addEventListener("click", function (event) {
+        if (clicked) {
+            event.preventDefault();
+            return;
+        }
+
+        clicked = true;
+
+        link.style.pointerEvents = "none";
+        link.style.opacity = "0.6";
+
+    });
+});
+</script>
+
 <body>
     <nav class="top-nav">
         <div class="brand-container">
