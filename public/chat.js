@@ -3,12 +3,137 @@
  *
  * Handles the chat UI interactions and communication with the backend API.
  */
+/**
+ * NASAQ Chat App - Cleaned Frontend
+ */
 
 // DOM elements
 const chatMessages = document.getElementById("chat-messages");
 const userInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
+
+// Helper: Check for agreement cookie
+function hasAgreed() {
+	return document.cookie.split(';').some((item) => item.trim().startsWith('nasaq_agreed='));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+	const modal = document.getElementById('disclaimer-modal');
+	const modalContent = document.querySelector('.modal-content');
+	const agreeBtn = document.getElementById('agree-btn');
+	const declineBtn = document.getElementById('decline-btn');
+	const readBtn = document.getElementById('read-policy-btn');
+	const pdfContainer = document.getElementById('pdf-viewer-container');
+	const errorMsg = document.getElementById('error-message');
+	const mainContent = document.querySelector('.main-wrapper');
+	const inputArea = document.querySelector('.message-input');
+
+	if (!modal || !agreeBtn) return;
+
+	if (hasAgreed()) {
+		modal.style.display = 'none';
+		mainContent?.classList.remove('locked');
+		inputArea?.classList.remove('locked');
+		userInput.disabled = false;
+		sendButton.disabled = false;
+	} else {
+		modal.style.display = 'flex';
+		mainContent?.classList.add('locked');
+		inputArea?.classList.add('locked');
+		userInput.disabled = true;
+		sendButton.disabled = true;
+		userInput.placeholder = "Please accept the agreement to chat...";
+	}
+
+	agreeBtn.addEventListener('click', () => {
+		const d = new Date();
+		d.setTime(d.getTime() + (30 * 24 * 60 * 60 * 1000));
+		document.cookie = "nasaq_agreed=true; expires=" + d.toUTCString() + "; path=/";
+		modal.style.display = 'none';
+		mainContent?.classList.remove('locked');
+		inputArea?.classList.remove('locked');
+		userInput.disabled = false;
+		sendButton.disabled = false;
+		userInput.placeholder = "Please Enter Your Prompt Here";
+	});
+
+	declineBtn.addEventListener('click', () => {
+		if (errorMsg) errorMsg.style.display = 'block';
+	});
+
+	readBtn.addEventListener('click', () => {
+		const isOpeningPDF = pdfContainer.style.display === 'none';
+		if (isOpeningPDF) {
+			pdfContainer.style.display = 'block';
+			modalContent.classList.add('expanded');
+			readBtn.innerText = 'Back to Message';
+		} else {
+			pdfContainer.style.display = 'none';
+			modalContent.classList.remove('expanded');
+			readBtn.innerText = 'Read Policy';
+		}
+	});
+
+	attachCopyButtonsToExistingMessages();
+});
+
+async function sendMessage() {
+	if (!hasAgreed()) {
+		alert("You must accept the agreement to use NASAQ ChatBot.");
+		location.reload();
+		return;
+	}
+
+	const message = userInput.value.trim();
+
+	if (!localStorage.getItem("sessionToken")) {
+		try {
+			await updateAndSetToken();
+		} catch (error) {
+			addMessageToChat("assistant", "Error initializing session.");
+			return;
+		}
+	}
+
+	if (message === "" || isProcessing) return;
+
+	isProcessing = true;
+	userInput.disabled = true;
+	sendButton.disabled = true;
+	addMessageToChat("user", message);
+	userInput.value = "";
+	typingIndicator.classList.add("visible");
+	chatHistory.push({ role: "user", content: message });
+
+	try {
+		const assistantMessageEl = document.createElement("div");
+		assistantMessageEl.className = "message assistant-message";
+		assistantMessageEl.innerHTML = "<p></p>";
+		chatMessages.appendChild(assistantMessageEl);
+		const assistantTextEl = assistantMessageEl.querySelector("p");
+		chatMessages.scrollTop = chatMessages.scrollHeight;
+
+		let response = await startResponseStream();
+
+		if (response.status === 401 || response.status === 500) {
+			await updateAndSetToken();
+			response = await startResponseStream();
+		}
+
+		if (!response.ok) throw new Error("Failed to get response");
+
+	} catch (error) {
+		console.error("Error:", error);
+		addMessageToChat("assistant", "Sorry, there was an error processing your request.");
+	} finally {
+		typingIndicator.classList.remove("visible");
+		isProcessing = false;
+		userInput.disabled = false;
+		sendButton.disabled = false;
+		userInput.focus();
+	}
+}
 
 // Chat state
 let chatHistory = [
@@ -70,6 +195,12 @@ async function startResponseStream() {
  * Sends a message to the chat API and processes the response
  */
 async function sendMessage() {
+	if (!hasAgreed()) {
+		alert("You must accept the agreement to use NASAQ ChatBot.");
+		location.reload(); // Forces the modal to reappear
+		return;
+	}
+
 	const message = userInput.value.trim();
 	if (!localStorage.getItem("sessionToken")) {
 		try {

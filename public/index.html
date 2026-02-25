@@ -36,8 +36,7 @@
 			<div id="chat-messages" class="chat-messages">
 				<div class="message assistant-message">
 					<p>
-						Hello! I'm an LLM chat app powered by Cloudflare Workers AI. How can
-						I help you today?
+						Hello! I'm an AI assistant to answer your labor relations questions. How can I help you today?
 					</p>
 				</div>
 			</div>
@@ -58,9 +57,30 @@
 		</div>
 		<p class="disclaimer">
 			Please do not enter any personal information. Information you provide may be used for training
-			and improving LLP provider's model. By using this app, you consent to the collection and use of your data as
-			described in our privacy policy.
+			and improving LLM provider's model.
 		</p>
+	</div>
+	<div id="disclaimer-modal" class="modal-overlay">
+		<div class="modal-content">
+			<h2>User Agreement & Disclaimer</h2>
+			<div id="modal-text">
+				<p>AI can make mistakes and its responses should be verified. By using this app, you consent to our
+					privacy policy and AI provider's data collection. Agreeing will create a cookie for 30 days.</p>
+			</div>
+
+			<div id="pdf-viewer-container" style="display: none; flex-grow: 1; margin-bottom: 15px; min-height: 200px;">
+				<iframe src="privacy-policy.pdf" width="100%" height="100%" style="border: none;"></iframe>
+			</div>
+
+			<div class="modal-actions">
+				<button id="read-policy-btn" class="modal-btn secondary">Read Policy</button>
+				<button id="decline-btn" class="modal-btn danger">Decline</button>
+				<button id="agree-btn" class="modal-btn primary">Agree</button>
+			</div>
+			<p id="error-message" class="error-text" style="display: none;">
+				You must accept the disclaimer to use the chatbot.
+			</p>
+		</div>
 	</div>
 	<script src="chat.js"></script>
 
