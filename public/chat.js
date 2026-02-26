@@ -80,64 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	attachCopyButtonsToExistingMessages();
 });
 
-async function sendMessage() {
-	/* commenting the cookies part to pass tests.*/
-	if (!hasAgreed()) {
-		alert("You must accept the agreement to use NASAQ ChatBot.");
-		location.reload();
-		return;
-	}
-/**/
-	const message = userInput.value.trim();
-
-	if (!localStorage.getItem("sessionToken")) {
-		try {
-			await updateAndSetToken();
-		} catch (error) {
-			addMessageToChat("assistant", "Error initializing session.");
-			return;
-		}
-	}
-
-	if (message === "" || isProcessing) return;
-
-	isProcessing = true;
-	userInput.disabled = true;
-	sendButton.disabled = true;
-	addMessageToChat("user", message);
-	userInput.value = "";
-	typingIndicator.classList.add("visible");
-	chatHistory.push({ role: "user", content: message });
-
-	try {
-		const assistantMessageEl = document.createElement("div");
-		assistantMessageEl.className = "message assistant-message";
-		assistantMessageEl.innerHTML = "<p></p>";
-		chatMessages.appendChild(assistantMessageEl);
-		const assistantTextEl = assistantMessageEl.querySelector("p");
-		chatMessages.scrollTop = chatMessages.scrollHeight;
-
-		let response = await startResponseStream();
-
-		if (response.status === 401 || response.status === 500) {
-			await updateAndSetToken();
-			response = await startResponseStream();
-		}
-
-		if (!response.ok) throw new Error("Failed to get response");
-
-	} catch (error) {
-		console.error("Error:", error);
-		addMessageToChat("assistant", "Sorry, there was an error processing your request.");
-	} finally {
-		typingIndicator.classList.remove("visible");
-		isProcessing = false;
-		userInput.disabled = false;
-		sendButton.disabled = false;
-		userInput.focus();
-	}
-}
-
 // Chat state
 let chatHistory = [
 	{
@@ -248,10 +190,6 @@ async function sendMessage(isRetry = false, retryQuestion = null) {
         userInput.style.height = "auto";
         chatHistory.push({ role: "user", content: message });
     }
-	// Setup 30-second timeout (Scenario ID011)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
 
 try {
         // Create new assistant response element
@@ -405,7 +343,7 @@ try {
         // Determine message (Scenario ID011)
         let errorMessage = "Sorry, there was an error processing your request.";
         if (error.name === 'AbortError') {
-            errorMessage = "Sorry for the slow service. Either there is a difficulty connecting to the AI service or the AI is searching a lot more documents to give a better answer.";
+            errorMessage = "30 second timeout reached, aborting request.";
         }
 
         // UPDATE RETRY TRACKER (Scenario ID012)
