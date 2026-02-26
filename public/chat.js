@@ -30,28 +30,28 @@ document.addEventListener('DOMContentLoaded', () => {
 	const inputArea = document.querySelector('.message-input');
 
 	if (!modal || !agreeBtn) return;
-	/* commenting the cookies part to pass tests.
+	/* commenting the cookies part to pass tests.*/
 		if (hasAgreed()) {
 			modal.style.display = 'none';
 			mainContent?.classList.remove('locked');
 			inputArea?.classList.remove('locked');
 			userInput.disabled = false;
 			sendButton.disabled = false;
-		} else {*/
+		} else {/**/
 	modal.style.display = 'flex';
 	mainContent?.classList.add('locked');
 	inputArea?.classList.add('locked');
 	userInput.disabled = true;
 	sendButton.disabled = true;
 	userInput.placeholder = "Please accept the agreement to chat...";
-	//}
+	}//cookies
 
 	agreeBtn.addEventListener('click', () => {
-		/* commenting the cookies part to pass tests.
+		/* commenting the cookies part to pass tests.*/
 		const d = new Date();
 		d.setTime(d.getTime() + (30 * 24 * 60 * 60 * 1000));
 		document.cookie = "nasaq_agreed=true; expires=" + d.toUTCString() + "; path=/";
-		*/
+		/**/
 		modal.style.display = 'none';
 		mainContent?.classList.remove('locked');
 		inputArea?.classList.remove('locked');
@@ -81,13 +81,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function sendMessage() {
-	/* commenting the cookies part to pass tests.
+	/* commenting the cookies part to pass tests.*/
 	if (!hasAgreed()) {
 		alert("You must accept the agreement to use NASAQ ChatBot.");
 		location.reload();
 		return;
 	}
-*/
+/**/
 	const message = userInput.value.trim();
 
 	if (!localStorage.getItem("sessionToken")) {
@@ -197,14 +197,29 @@ async function startResponseStream() {
 /**
  * Sends a message to the chat API and processes the response
  */
-async function sendMessage() {
+const retryTracker = new Map();
+async function sendMessage(isRetry = false, retryQuestion = null) {
 	if (!hasAgreed()) {
 		alert("You must accept the agreement to use NASAQ ChatBot.");
 		location.reload(); // Forces the modal to reappear
 		return;
 	}
 
-	const message = userInput.value.trim();
+	// Determine the message source: either the retry argument or the input field
+    const message = isRetry ? retryQuestion : userInput.value.trim();
+
+	// Check Max Retries (Scenario ID012)
+    const currentRetries = retryTracker.get(message) || 0;
+    if (currentRetries >= 3) {
+        const retryModal = document.getElementById('max-retries-modal');
+        retryModal.style.display = 'flex';
+        
+        document.getElementById('close-retries-btn').onclick = () => {
+            retryModal.style.display = 'none';
+        };
+        return;
+    }
+
 	if (!localStorage.getItem("sessionToken")) {
 		try {
 			await updateAndSetToken();
@@ -224,163 +239,219 @@ async function sendMessage() {
 	isProcessing = true;
 	userInput.disabled = true;
 	sendButton.disabled = true;
-
-	// Add user message to chat
-	addMessageToChat("user", message);
-
-	// Clear input
-	userInput.value = "";
-	userInput.style.height = "auto";
-
 	// Show typing indicator
 	typingIndicator.classList.add("visible");
 
-	// Add message to history
-	chatHistory.push({ role: "user", content: message });
+	if (!isRetry) {
+        addMessageToChat("user", message);
+        userInput.value = "";
+        userInput.style.height = "auto";
+        chatHistory.push({ role: "user", content: message });
+    }
+	// Setup 30-second timeout (Scenario ID011)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-	try {
-		// Create new assistant response element
-		const assistantMessageEl = document.createElement("div");
-		assistantMessageEl.className = "message assistant-message";
-		assistantMessageEl.innerHTML = "<p></p>";
-		chatMessages.appendChild(assistantMessageEl);
-		attachCopyButton(assistantMessageEl);
-		const assistantTextEl = assistantMessageEl.querySelector("p");
 
-		// Scroll to bottom
-		chatMessages.scrollTop = chatMessages.scrollHeight;
+try {
+        // Create new assistant response element
+        const assistantMessageEl = document.createElement("div");
+        assistantMessageEl.className = "message assistant-message";
+        assistantMessageEl.innerHTML = "<p></p>";
+        chatMessages.appendChild(assistantMessageEl);
+        attachCopyButton(assistantMessageEl);
+        const assistantTextEl = assistantMessageEl.querySelector("p");
 
-		// Send request to API
-		let response = await startResponseStream();
-		if (response.status === 401) {
-			// retry logic for unauthorized error -> try refreshing token
-			await updateAndSetToken();
-			response = await startResponseStream();
-		}
+        // Scroll to bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
 
-		// Handle errors
-		if (!response.ok) {
-			throw new Error("Failed to get response");
-		}
-		if (!response.body) {
-			throw new Error("Response body is null");
-		}
+        // --- TIMEOUT SETUP (Scenario ID011) ---
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second limit
 
-		// Process streaming response
-		const reader = response.body.getReader();
-		const decoder = new TextDecoder();
-		let responseText = "";
-		let buffer = "";
-		const flushAssistantText = () => {
-			assistantTextEl.textContent = responseText;
-			const chatArea = document.querySelector('.chat-area');
-			chatArea.scrollTop = chatArea.scrollHeight;
-		};
+        // Send request to API
+        // Using fetch directly to attach the abort signal
+        let response = await fetch("/api/chat", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Session-Token": localStorage.getItem("sessionToken") || "",
+            },
+            signal: controller.signal,
+            body: JSON.stringify({
+                messages: chatHistory,
+            }),
+        });
 
-		let sawDone = false;
-		while (true) {
-			const { done, value } = await reader.read();
+        clearTimeout(timeoutId); // Cancel the timeout since the request started responding
 
-			if (done) {
-				// Process any remaining complete events in buffer
-				const parsed = consumeSseEvents(buffer + "\n\n");
-				for (const data of parsed.events) {
-					if (data === "[DONE]") {
-						break;
-					}
-					try {
-						const jsonData = JSON.parse(data);
-						// Handle both Workers AI format (response) and OpenAI format (choices[0].delta.content)
-						let content = "";
-						if (
-							typeof jsonData.response === "string" &&
-							jsonData.response.length > 0
-						) {
-							content = jsonData.response;
-						} else if (jsonData.choices?.[0]?.delta?.content) {
-							content = jsonData.choices[0].delta.content;
-						}
-						if (content) {
-							responseText += content;
-							flushAssistantText();
-						}
-					} catch (e) {
-						console.error("Error parsing SSE data as JSON:", e, data);
-					}
-				}
-				break;
-			}
+        if (response.status === 401 || response.status === 500) {
+            // retry logic for unauthorized error -> try refreshing token
+            await updateAndSetToken();
+            // Re-fetch with a fresh controller for the retry
+            const retryController = new AbortController();
+            const retryTimeoutId = setTimeout(() => retryController.abort(), 30000);
+            
+            response = await fetch("/api/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Session-Token": localStorage.getItem("sessionToken") || "",
+                },
+                signal: retryController.signal,
+                body: JSON.stringify({ messages: chatHistory }),
+            });
+            clearTimeout(retryTimeoutId);
+        }
 
-			// Decode chunk
-			buffer += decoder.decode(value, { stream: true });
-			const parsed = consumeSseEvents(buffer);
-			buffer = parsed.buffer;
-			for (const data of parsed.events) {
-				if (data === "[DONE]") {
-					sawDone = true;
-					buffer = "";
-					break;
-				}
-				try {
-					const jsonData = JSON.parse(data);
-					// Handle both Workers AI format (response) and OpenAI format (choices[0].delta.content)
-					let content = "";
-					if (
-						typeof jsonData.response === "string" &&
-						jsonData.response.length > 0
-					) {
-						content = jsonData.response;
-					} else if (jsonData.choices?.[0]?.delta?.content) {
-						content = jsonData.choices[0].delta.content;
-					}
-					if (content) {
-						responseText += content;
-						flushAssistantText();
-					}
-				} catch (e) {
-					console.error("Error parsing SSE data as JSON:", e, data);
-				}
-			}
-			if (sawDone) {
-				break;
-			}
-		}
+        // Handle errors
+        if (!response.ok) {
+            throw new Error("Failed to get response");
+        }
+        if (!response.body) {
+            throw new Error("Response body is null");
+        }
 
-		// Add completed response to chat history
-		if (responseText.length > 0) {
-			chatHistory.push({ role: "assistant", content: responseText });
-		}
-	} catch (error) {
-		console.error("Error:", error);
-		addMessageToChat(
-			"assistant",
-			"Sorry, there was an error processing your request.",
-		);
-	} finally {
-		// Hide typing indicator
-		typingIndicator.classList.remove("visible");
+        // Process streaming response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let responseText = "";
+        let buffer = "";
+        const flushAssistantText = () => {
+            assistantTextEl.textContent = responseText;
+            const chatArea = document.querySelector('.chat-area');
+            if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
+        };
 
-		// Re-enable input
-		isProcessing = false;
-		userInput.disabled = false;
-		sendButton.disabled = false;
-		userInput.focus();
-	}
+        let sawDone = false;
+        while (true) {
+            const { done, value } = await reader.read();
+
+            if (done) {
+                // Process any remaining complete events in buffer
+                const parsed = consumeSseEvents(buffer + "\n\n");
+                for (const data of parsed.events) {
+                    if (data === "[DONE]") {
+                        break;
+                    }
+                    try {
+                        const jsonData = JSON.parse(data);
+                        let content = "";
+                        if (typeof jsonData.response === "string" && jsonData.response.length > 0) {
+                            content = jsonData.response;
+                        } else if (jsonData.choices?.[0]?.delta?.content) {
+                            content = jsonData.choices[0].delta.content;
+                        }
+                        if (content) {
+                            responseText += content;
+                            flushAssistantText();
+                        }
+                    } catch (e) {
+                        console.error("Error parsing SSE data as JSON:", e, data);
+                    }
+                }
+                break;
+            }
+
+            // Decode chunk
+            buffer += decoder.decode(value, { stream: true });
+            const parsed = consumeSseEvents(buffer);
+            buffer = parsed.buffer;
+            for (const data of parsed.events) {
+                if (data === "[DONE]") {
+                    sawDone = true;
+                    buffer = "";
+                    break;
+                }
+                try {
+                    const jsonData = JSON.parse(data);
+                    let content = "";
+                    if (typeof jsonData.response === "string" && jsonData.response.length > 0) {
+                        content = jsonData.response;
+                    } else if (jsonData.choices?.[0]?.delta?.content) {
+                        content = jsonData.choices[0].delta.content;
+                    }
+                    if (content) {
+                        responseText += content;
+                        flushAssistantText();
+                    }
+                } catch (e) {
+                    console.error("Error parsing SSE data as JSON:", e, data);
+                }
+            }
+            if (sawDone) {
+                break;
+            }
+        }
+
+        // Add completed response to chat history
+        if (responseText.length > 0) {
+            chatHistory.push({ role: "assistant", content: responseText });
+            // SUCCESS: Reset the retry count for this specific question
+            retryTracker.delete(message);
+        }
+
+    } catch (error) {
+        console.error("Error:", error);
+        
+        // CLEANUP: If we have an empty assistant bubble because of a crash, remove it
+        if (chatMessages.lastChild && chatMessages.lastChild.classList.contains('assistant-message')) {
+            const p = chatMessages.lastChild.querySelector('p');
+            if (!p || !p.textContent.trim()) {
+                chatMessages.removeChild(chatMessages.lastChild);
+            }
+        }
+
+        // Determine message (Scenario ID011)
+        let errorMessage = "Sorry, there was an error processing your request.";
+        if (error.name === 'AbortError') {
+            errorMessage = "Sorry for the slow service. Either there is a difficulty connecting to the AI service or the AI is searching a lot more documents to give a better answer.";
+        }
+
+        // UPDATE RETRY TRACKER (Scenario ID012)
+        const currentRetries = (retryTracker.get(message) || 0) + 1;
+        retryTracker.set(message, currentRetries);
+
+        // Add error message with retry capability
+        addMessageToChat("assistant", errorMessage, true, message);
+
+    } finally {
+        // Hide typing indicator
+        typingIndicator.classList.remove("visible");
+
+        // Re-enable input
+        isProcessing = false;
+        userInput.disabled = false;
+        sendButton.disabled = false;
+        userInput.focus();
+    }
 }
 
 /**
  * Helper function to add message to chat
  */
-function addMessageToChat(role, content) {
-	const messageEl = document.createElement("div");
-	messageEl.className = `message ${role}-message`;
-	messageEl.innerHTML = `<p>${content}</p>`;
-	chatMessages.appendChild(messageEl);
-	attachCopyButton(messageEl);
+function addMessageToChat(role, content, isError = false, originalQuestion = null) {
+    const messageEl = document.createElement("div");
+    // Adds 'error-bubble' class if it's a failure
+    messageEl.className = `message ${role}-message ${isError ? 'error-bubble' : ''}`;
+    messageEl.innerHTML = `<p>${content}</p>`;
+    chatMessages.appendChild(messageEl);
+    
+    attachCopyButton(messageEl);
 
-	// Scroll to bottom
-	const chatArea = document.querySelector('.chat-area');
-	chatArea.scrollTop = chatArea.scrollHeight;
+    // If it's an error and we haven't hit the 3-retry limit yet
+    if (isError && originalQuestion) {
+        const retryBtn = document.createElement('button');
+        retryBtn.className = 'retry-btn';
+        retryBtn.innerHTML = '<span>↻</span> Retry';
+        retryBtn.title = 'Try this prompt again';
+        // This calls the sendMessage function again with the exact same text
+        retryBtn.onclick = () => sendMessage(true, originalQuestion);
+        messageEl.appendChild(retryBtn);
+    }
+
+    const chatArea = document.querySelector('.chat-area');
+    chatArea.scrollTop = chatArea.scrollHeight;
 }
 
 /**
