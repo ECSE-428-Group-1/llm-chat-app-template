@@ -64,7 +64,8 @@ async function getStoreId(openai: OpenAI) {
 
 
 export default async function generate_answer(messages: ChatMessage[]) {
-    const openai = new OpenAI();
+    var apiKey = env.OPENAI_API_KEY;
+    const openai = new OpenAI({apiKey:apiKey});
 		const storeId = await getStoreId(openai);
 
 
@@ -182,7 +183,6 @@ export default async function generate_answer(messages: ChatMessage[]) {
       MODEL_ID,
       {
         messages: messages,
-        tools: TOOLS,
         stream: true
       },
     );

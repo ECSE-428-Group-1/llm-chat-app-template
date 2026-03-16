@@ -89,6 +89,7 @@ let chatHistory = [
 	},
 ];
 let isProcessing = false;
+let currentEditingMessageEl = null;
 
 // Auto-resize textarea as user types
 userInput.addEventListener("input", function () {
@@ -185,7 +186,14 @@ async function sendMessage(isRetry = false, retryQuestion = null) {
 	typingIndicator.classList.add("visible");
 
 	if (!isRetry) {
-        addMessageToChat("user", message);
+		// If we're editing a message, remove the old one from DOM and clear the flag
+		if (currentEditingMessageEl) {
+			currentEditingMessageEl.remove();
+			currentEditingMessageEl = null;
+		}
+		
+        // Pass the current chatHistory length as the index before pushing
+        addMessageToChat("user", message, false, null, chatHistory.length);
         userInput.value = "";
         userInput.style.height = "auto";
         chatHistory.push({ role: "user", content: message });
@@ -196,6 +204,8 @@ try {
         const assistantMessageEl = document.createElement("div");
         assistantMessageEl.className = "message assistant-message";
         assistantMessageEl.innerHTML = "<p></p>";
+        // Store the index that this assistant message will have in chatHistory
+        assistantMessageEl.dataset.chatIndex = chatHistory.length;
         chatMessages.appendChild(assistantMessageEl);
         attachCopyButton(assistantMessageEl);
         const assistantTextEl = assistantMessageEl.querySelector("p");
@@ -368,14 +378,32 @@ try {
 /**
  * Helper function to add message to chat
  */
-function addMessageToChat(role, content, isError = false, originalQuestion = null) {
+function addMessageToChat(role, content, isError = false, originalQuestion = null, chatHistoryIndex = null) {
     const messageEl = document.createElement("div");
     // Adds 'error-bubble' class if it's a failure
     messageEl.className = `message ${role}-message ${isError ? 'error-bubble' : ''}`;
     messageEl.innerHTML = `<p>${content}</p>`;
+    
+    // Store the chat history index for the edit feature
+    if (chatHistoryIndex !== null) {
+        messageEl.dataset.chatIndex = chatHistoryIndex;
+    }
+    
     chatMessages.appendChild(messageEl);
     
     attachCopyButton(messageEl);
+
+    // Add edit button ONLY for the last user message (not errors)
+    if (role === 'user' && !isError) {
+        // Remove edit buttons from all other user messages
+        const allUserMessages = document.querySelectorAll('.user-message:not(.error-bubble)');
+        allUserMessages.forEach(msg => {
+            const editBtn = msg.querySelector('.edit-btn');
+            if (editBtn) editBtn.remove();
+        });
+        // Add edit button to this new message
+        attachEditButton(messageEl);
+    }
 
     // If it's an error and we haven't hit the 3-retry limit yet
     if (isError && originalQuestion) {
@@ -423,6 +451,67 @@ function attachCopyButton(messageEl) {
 	});
 
 	messageEl.appendChild(btn);
+}
+
+/**
+ * Attach an edit button to a user message element (if not already present)
+ */
+function attachEditButton(messageEl) {
+	if (!messageEl || messageEl.querySelector('.edit-btn')) return;
+	const btn = document.createElement('button');
+	btn.type = 'button';
+	btn.className = 'edit-btn';
+	btn.title = 'Edit and resend this message';
+	btn.innerText = '✎';
+
+	btn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		editLastMessage(messageEl);
+	});
+
+	messageEl.appendChild(btn);
+}
+
+/**
+ * Edit a user message by marking it visually and populating the input field.
+ * The message will be removed from DOM when the edited version is actually sent.
+ */
+function editLastMessage(messageEl) {
+	const msgText = messageEl.querySelector('p')?.textContent.trim() || '';
+	
+	if (!msgText) return;
+
+	const chatIndexToEdit = parseInt(messageEl.dataset.chatIndex || '-1', 10);
+	
+	// Trim chat history to keep up to and including this message (remove subsequent responses)
+	if (chatIndexToEdit >= 0 && chatIndexToEdit < chatHistory.length) {
+		chatHistory = chatHistory.slice(0, chatIndexToEdit + 1);
+	}
+	
+	// Remove from DOM all messages AFTER this one (but keep this message visible)
+	const allMessages = Array.from(document.querySelectorAll('.message'));
+	const messageIndex = allMessages.indexOf(messageEl);
+	
+	if (messageIndex !== -1) {
+		const messagesToRemove = allMessages.slice(messageIndex + 1);
+		messagesToRemove.forEach(msg => msg.remove());
+	}
+	
+	// Mark this message as being edited visually
+	messageEl.classList.add('editing');
+	currentEditingMessageEl = messageEl;
+	
+	// Populate the input textarea with the original message
+	userInput.value = msgText;
+	userInput.style.height = 'auto';
+	userInput.style.height = userInput.scrollHeight + 'px';
+	
+	// Focus on the input and scroll to it
+	userInput.focus();
+	const inputArea = document.querySelector('.message-input');
+	if (inputArea) {
+		inputArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+	}
 }
 
 /** Attach copy buttons to any existing static messages on the page */
