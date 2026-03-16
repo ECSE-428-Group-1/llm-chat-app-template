@@ -333,6 +333,50 @@ body {
     color: #fff;
 }
 
+/* Edit button inside message bubbles (hidden until hover, user messages only) */
+.edit-btn {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: auto;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.06);
+    border: none;
+    color: var(--text-dark);
+    padding: 6px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    font-size: 0.9rem;
+}
+
+.user-message:hover .edit-btn {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.edit-btn:hover {
+    background: rgba(0, 0, 0, 0.12);
+}
+
+/* Editing state for user messages being edited */
+.message.editing {
+    opacity: 0.6;
+    border-left: 3px solid #ff9f43;
+    transition: opacity 0.2s ease, border-color 0.2s ease;
+}
+
+.message.editing::after {
+    content: "editing...";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 0.75rem;
+    color: #ff9f43;
+    font-weight: 500;
+}
+
 /* Popup for user agreement */
 /* Modal Overlay */
 /* The dark background that covers the whole screen  */
