@@ -196,6 +196,10 @@ export function renderChatHistorySidebar() {
 
         link.addEventListener("click", (e) => {
             e.preventDefault();
+            if (state.isProcessing) {
+                showToast("AI is thinking — wait for response before switching chats.");
+                return;
+            }
             if (!selectChat(chat.id)) return;
             renderCurrentChat();
             renderChatHistorySidebar();
