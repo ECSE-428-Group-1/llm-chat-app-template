@@ -3,7 +3,7 @@
  */
 
 import { dom, getChatArea } from "./dom.js";
-import { state, selectChat } from "./state.js";
+import { state, selectChat, saveSessionsToStorage, currentChatHasUserMessage, isCurrentChatEmpty } from "./state.js";
 
 export function addMessageToChat(
     role,
@@ -135,6 +135,23 @@ export function attachCopyButtonsToExistingMessages() {
     messages.forEach(attachCopyButton);
 }
 
+export function showToast(message, duration = 2500) {
+    const container = document.getElementById("toast-container");
+    if (!container) return;
+
+    const toast = document.createElement("div");
+    toast.className = "toast-message";
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add("fade-out");
+        toast.addEventListener("transitionend", () => {
+            toast.remove();
+        });
+    }, duration);
+}
+
 export function renderCurrentChat() {
     if (!dom.chatMessages) return;
     dom.chatMessages.innerHTML = "";
@@ -168,17 +185,32 @@ export function renderChatHistorySidebar() {
     chats.forEach((chat) => {
         const item = document.createElement("li");
         item.className = "history-item";
-        item.textContent = chat.title;
         if (chat.id === state.currentChatId) {
+            item.classList.add("active");
             item.classList.add("active-chat");
         }
 
-        item.addEventListener("click", () => {
+        const link = document.createElement("a");
+        link.href = "#";
+        link.textContent = chat.title;
+
+        link.addEventListener("click", (e) => {
+            e.preventDefault();
             if (!selectChat(chat.id)) return;
             renderCurrentChat();
             renderChatHistorySidebar();
         });
 
+        link.addEventListener("dblclick", (e) => {
+            e.preventDefault();
+            const newTitle = prompt("Rename chat:", chat.title || "");
+            if (!newTitle || !newTitle.trim()) return;
+            state.allChats[chat.id].title = newTitle.trim();
+            saveSessionsToStorage();
+            renderChatHistorySidebar();
+        });
+
+        item.appendChild(link);
         historyList.appendChild(item);
     });
 }
@@ -188,6 +220,16 @@ export function setupNewChatButton(onCreate) {
     if (!button) return;
 
     button.addEventListener("click", () => {
+        if (state.isProcessing) {
+            showToast("AI is still thinking — please wait before creating a new chat.");
+            return;
+        }
+
+        if (isCurrentChatEmpty()) {
+            showToast("Current chat has no user messages yet — send something first.");
+            return;
+        }
+
         const chatId = onCreate();
         if (chatId) {
             renderChatHistorySidebar();

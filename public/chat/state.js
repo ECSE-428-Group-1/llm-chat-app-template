@@ -96,6 +96,14 @@ export function saveCurrentChat() {
     saveSessionsToStorage();
 }
 
+export function currentChatHasUserMessage() {
+    return state.chatHistory.some((msg) => msg.role === "user");
+}
+
+export function isCurrentChatEmpty() {
+    return !currentChatHasUserMessage();
+}
+
 export function resetSessionState() {
     const initial = createDefaultAssistantMessage();
     state.chatHistory = [initial];
