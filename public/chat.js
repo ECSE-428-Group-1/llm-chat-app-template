@@ -15,94 +15,94 @@ const typingIndicator = document.getElementById("typing-indicator");
 
 // Helper: Check for agreement cookie
 function hasAgreed() {
-	return document.cookie.split(';').some((item) => item.trim().startsWith('nasaq_agreed='));
+    return document.cookie.split(';').some((item) => item.trim().startsWith('nasaq_agreed='));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-	const modal = document.getElementById('disclaimer-modal');
-	const modalContent = document.querySelector('.modal-content');
-	const agreeBtn = document.getElementById('agree-btn');
-	const declineBtn = document.getElementById('decline-btn');
-	const readBtn = document.getElementById('read-policy-btn');
-	const pdfContainer = document.getElementById('pdf-viewer-container');
-	const errorMsg = document.getElementById('error-message');
-	const mainContent = document.querySelector('.main-wrapper');
-	const inputArea = document.querySelector('.message-input');
+    const modal = document.getElementById('disclaimer-modal');
+    const modalContent = document.querySelector('.modal-content');
+    const agreeBtn = document.getElementById('agree-btn');
+    const declineBtn = document.getElementById('decline-btn');
+    const readBtn = document.getElementById('read-policy-btn');
+    const pdfContainer = document.getElementById('pdf-viewer-container');
+    const errorMsg = document.getElementById('error-message');
+    const mainContent = document.querySelector('.main-wrapper');
+    const inputArea = document.querySelector('.message-input');
 
-	if (!modal || !agreeBtn) return;
-	/* commenting the cookies part to pass tests.*/
-		if (hasAgreed()) {
-			modal.style.display = 'none';
-			mainContent?.classList.remove('locked');
-			inputArea?.classList.remove('locked');
-			userInput.disabled = false;
-			sendButton.disabled = false;
-		} else {/**/
-	modal.style.display = 'flex';
-	mainContent?.classList.add('locked');
-	inputArea?.classList.add('locked');
-	userInput.disabled = true;
-	sendButton.disabled = true;
-	userInput.placeholder = "Please accept the agreement to chat...";
-	}//cookies
+    if (!modal || !agreeBtn) return;
+    /* commenting the cookies part to pass tests.*/
+    if (hasAgreed()) {
+        modal.style.display = 'none';
+        mainContent?.classList.remove('locked');
+        inputArea?.classList.remove('locked');
+        userInput.disabled = false;
+        sendButton.disabled = false;
+    } else {/**/
+        modal.style.display = 'flex';
+        mainContent?.classList.add('locked');
+        inputArea?.classList.add('locked');
+        userInput.disabled = true;
+        sendButton.disabled = true;
+        userInput.placeholder = "Please accept the agreement to chat...";
+    }//cookies
 
-	agreeBtn.addEventListener('click', () => {
-		/* commenting the cookies part to pass tests.*/
-		const d = new Date();
-		d.setTime(d.getTime() + (30 * 24 * 60 * 60 * 1000));
-		document.cookie = "nasaq_agreed=true; expires=" + d.toUTCString() + "; path=/";
-		/**/
-		modal.style.display = 'none';
-		mainContent?.classList.remove('locked');
-		inputArea?.classList.remove('locked');
-		userInput.disabled = false;
-		sendButton.disabled = false;
-		userInput.placeholder = "Please Enter Your Prompt Here";
-	});
+    agreeBtn.addEventListener('click', () => {
+        /* commenting the cookies part to pass tests.*/
+        const d = new Date();
+        d.setTime(d.getTime() + (30 * 24 * 60 * 60 * 1000));
+        document.cookie = "nasaq_agreed=true; expires=" + d.toUTCString() + "; path=/";
+        /**/
+        modal.style.display = 'none';
+        mainContent?.classList.remove('locked');
+        inputArea?.classList.remove('locked');
+        userInput.disabled = false;
+        sendButton.disabled = false;
+        userInput.placeholder = "Please Enter Your Prompt Here";
+    });
 
-	declineBtn.addEventListener('click', () => {
-		if (errorMsg) errorMsg.style.display = 'block';
-	});
+    declineBtn.addEventListener('click', () => {
+        if (errorMsg) errorMsg.style.display = 'block';
+    });
 
-	readBtn.addEventListener('click', () => {
-		const isOpeningPDF = pdfContainer.style.display === 'none';
-		if (isOpeningPDF) {
-			pdfContainer.style.display = 'block';
-			modalContent.classList.add('expanded');
-			readBtn.innerText = 'Back to Message';
-		} else {
-			pdfContainer.style.display = 'none';
-			modalContent.classList.remove('expanded');
-			readBtn.innerText = 'Read Policy';
-		}
-	});
+    readBtn.addEventListener('click', () => {
+        const isOpeningPDF = pdfContainer.style.display === 'none';
+        if (isOpeningPDF) {
+            pdfContainer.style.display = 'block';
+            modalContent.classList.add('expanded');
+            readBtn.innerText = 'Back to Message';
+        } else {
+            pdfContainer.style.display = 'none';
+            modalContent.classList.remove('expanded');
+            readBtn.innerText = 'Read Policy';
+        }
+    });
 
-	attachCopyButtonsToExistingMessages();
+    attachCopyButtonsToExistingMessages();
 });
 
 // Chat state
 let chatHistory = [
-	{
-		role: "assistant",
-		content:
-			"Hello! I'm an LLM chat app powered by Cloudflare Workers AI. How can I help you today?",
-	},
+    {
+        role: "assistant",
+        content:
+            "Hello! I'm an LLM chat app powered by Cloudflare Workers AI. How can I help you today?",
+    },
 ];
 let isProcessing = false;
 let currentEditingMessageEl = null;
 
 // Auto-resize textarea as user types
 userInput.addEventListener("input", function () {
-	this.style.height = "auto";
-	this.style.height = this.scrollHeight + "px";
+    this.style.height = "auto";
+    this.style.height = this.scrollHeight + "px";
 });
 
 // Send message on Enter (without Shift)
 userInput.addEventListener("keydown", function (e) {
-	if (e.key === "Enter" && !e.shiftKey) {
-		e.preventDefault();
-		sendMessage();
-	}
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
 });
 
 // Send button click handler
@@ -110,31 +110,31 @@ sendButton.addEventListener("click", sendMessage);
 
 // Requests for a new token and updates it in localStorage
 async function updateAndSetToken() {
-	const response = await fetch("/api/session-token/generate", {
-		method: "GET",
-		headers: {
-			'Session-Token': localStorage.getItem('sessionToken') || '',
-		}
-	});
-	if (!response.ok) {
-		throw new Error("Failed to get session token");
-	}
-	const token = (await response.json())['token'];
-	localStorage.setItem("sessionToken", token);
-	return token;
+    const response = await fetch("/api/session-token/generate", {
+        method: "GET",
+        headers: {
+            'Session-Token': localStorage.getItem('sessionToken') || '',
+        }
+    });
+    if (!response.ok) {
+        throw new Error("Failed to get session token");
+    }
+    const token = (await response.json())['token'];
+    localStorage.setItem("sessionToken", token);
+    return token;
 }
 
 async function startResponseStream() {
-	return await fetch("/api/chat", {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			"Session-Token": localStorage.getItem("sessionToken") || "",
-		},
-		body: JSON.stringify({
-			messages: chatHistory,
-		}),
-	});
+    return await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Session-Token": localStorage.getItem("sessionToken") || "",
+        },
+        body: JSON.stringify({
+            messages: chatHistory,
+        }),
+    });
 }
 
 /**
@@ -142,56 +142,56 @@ async function startResponseStream() {
  */
 const retryTracker = new Map();
 async function sendMessage(isRetry = false, retryQuestion = null) {
-	if (!hasAgreed()) {
-		alert("You must accept the agreement to use NASAQ ChatBot.");
-		location.reload(); // Forces the modal to reappear
-		return;
-	}
+    if (!hasAgreed()) {
+        alert("You must accept the agreement to use NASAQ ChatBot.");
+        location.reload(); // Forces the modal to reappear
+        return;
+    }
 
-	// Determine the message source: either the retry argument or the input field
+    // Determine the message source: either the retry argument or the input field
     const message = isRetry ? retryQuestion : userInput.value.trim();
 
-	// Check Max Retries (Scenario ID012)
+    // Check Max Retries (Scenario ID012)
     const currentRetries = retryTracker.get(message) || 0;
     if (currentRetries >= 3) {
         const retryModal = document.getElementById('max-retries-modal');
         retryModal.style.display = 'flex';
-        
+
         document.getElementById('close-retries-btn').onclick = () => {
             retryModal.style.display = 'none';
         };
         return;
     }
 
-	if (!localStorage.getItem("sessionToken")) {
-		try {
-			await updateAndSetToken();
-		} catch (error) {
-			console.error("Error getting session token:", error);
-			addMessageToChat(
-				"assistant",
-				"Sorry, there was an error initializing the chat session.",
-			);
-			return;
-		}
-	}
-	// Don't send empty messages
-	if (message === "" || isProcessing) return;
+    if (!localStorage.getItem("sessionToken")) {
+        try {
+            await updateAndSetToken();
+        } catch (error) {
+            console.error("Error getting session token:", error);
+            addMessageToChat(
+                "assistant",
+                "Sorry, there was an error initializing the chat session.",
+            );
+            return;
+        }
+    }
+    // Don't send empty messages
+    if (message === "" || isProcessing) return;
 
-	// Disable input while processing
-	isProcessing = true;
-	userInput.disabled = true;
-	sendButton.disabled = true;
-	// Show typing indicator
-	typingIndicator.classList.add("visible");
+    // Disable input while processing
+    isProcessing = true;
+    userInput.disabled = true;
+    sendButton.disabled = true;
+    // Show typing indicator
+    typingIndicator.classList.add("visible");
 
-	if (!isRetry) {
-		// If we're editing a message, remove the old one from DOM and clear the flag
-		if (currentEditingMessageEl) {
-			currentEditingMessageEl.remove();
-			currentEditingMessageEl = null;
-		}
-		
+    if (!isRetry) {
+        // If we're editing a message, remove the old one from DOM and clear the flag
+        if (currentEditingMessageEl) {
+            currentEditingMessageEl.remove();
+            currentEditingMessageEl = null;
+        }
+
         // Pass the current chatHistory length as the index before pushing
         addMessageToChat("user", message, false, null, chatHistory.length);
         userInput.value = "";
@@ -199,7 +199,7 @@ async function sendMessage(isRetry = false, retryQuestion = null) {
         chatHistory.push({ role: "user", content: message });
     }
 
-try {
+    try {
         // Create new assistant response element
         const assistantMessageEl = document.createElement("div");
         assistantMessageEl.className = "message assistant-message";
@@ -215,7 +215,7 @@ try {
 
         // --- TIMEOUT SETUP (Scenario ID011) ---
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second limit
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second limit
 
         // Send request to API
         // Using fetch directly to attach the abort signal
@@ -239,7 +239,7 @@ try {
             // Re-fetch with a fresh controller for the retry
             const retryController = new AbortController();
             const retryTimeoutId = setTimeout(() => retryController.abort(), 30000);
-            
+
             response = await fetch("/api/chat", {
                 method: "POST",
                 headers: {
@@ -341,7 +341,7 @@ try {
 
     } catch (error) {
         console.error("Error:", error);
-        
+
         // CLEANUP: If we have an empty assistant bubble because of a crash, remove it
         if (chatMessages.lastChild && chatMessages.lastChild.classList.contains('assistant-message')) {
             const p = chatMessages.lastChild.querySelector('p');
@@ -383,14 +383,14 @@ function addMessageToChat(role, content, isError = false, originalQuestion = nul
     // Adds 'error-bubble' class if it's a failure
     messageEl.className = `message ${role}-message ${isError ? 'error-bubble' : ''}`;
     messageEl.innerHTML = `<p>${content}</p>`;
-    
+
     // Store the chat history index for the edit feature
     if (chatHistoryIndex !== null) {
         messageEl.dataset.chatIndex = chatHistoryIndex;
     }
-    
+
     chatMessages.appendChild(messageEl);
-    
+
     attachCopyButton(messageEl);
 
     // Add edit button ONLY for the last user message (not errors)
@@ -424,52 +424,52 @@ function addMessageToChat(role, content, isError = false, originalQuestion = nul
  * Attach a copy button to a message element (if not already present)
  */
 function attachCopyButton(messageEl) {
-	if (!messageEl || messageEl.querySelector('.copy-btn')) return;
-	const btn = document.createElement('button');
-	btn.type = 'button';
-	btn.className = 'copy-btn';
-	btn.title = 'Copy message';
-	btn.innerText = '⮺';
+    if (!messageEl || messageEl.querySelector('.copy-btn')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'copy-btn';
+    btn.title = 'Copy message';
+    btn.innerText = '⮺';
 
-	btn.addEventListener('click', async (e) => {
-		e.stopPropagation();
-		const p = messageEl.querySelector('p');
-		const text = p ? p.textContent.trim() : '';
-		try {
-			await navigator.clipboard.writeText(text);
-			btn.innerText = 'Copied';
-			btn.classList.add('copied');
-			setTimeout(() => {
-				btn.innerText = '⮺';
-				btn.classList.remove('copied');
-			}, 1500);
-		} catch (err) {
-			console.error('Copy failed', err);
-			btn.innerText = 'Failed';
-			setTimeout(() => { btn.innerText = '⮺'; }, 1500);
-		}
-	});
+    btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const p = messageEl.querySelector('p');
+        const text = p ? p.textContent.trim() : '';
+        try {
+            await navigator.clipboard.writeText(text);
+            btn.innerText = 'Copied';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.innerText = '⮺';
+                btn.classList.remove('copied');
+            }, 1500);
+        } catch (err) {
+            console.error('Copy failed', err);
+            btn.innerText = 'Failed';
+            setTimeout(() => { btn.innerText = '⮺'; }, 1500);
+        }
+    });
 
-	messageEl.appendChild(btn);
+    messageEl.appendChild(btn);
 }
 
 /**
  * Attach an edit button to a user message element (if not already present)
  */
 function attachEditButton(messageEl) {
-	if (!messageEl || messageEl.querySelector('.edit-btn')) return;
-	const btn = document.createElement('button');
-	btn.type = 'button';
-	btn.className = 'edit-btn';
-	btn.title = 'Edit and resend this message';
-	btn.innerText = '✎';
+    if (!messageEl || messageEl.querySelector('.edit-btn')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'edit-btn';
+    btn.title = 'Edit and resend this message';
+    btn.innerText = '✎';
 
-	btn.addEventListener('click', (e) => {
-		e.stopPropagation();
-		editLastMessage(messageEl);
-	});
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        editLastMessage(messageEl);
+    });
 
-	messageEl.appendChild(btn);
+    messageEl.appendChild(btn);
 }
 
 /**
@@ -477,68 +477,68 @@ function attachEditButton(messageEl) {
  * The message will be removed from DOM when the edited version is actually sent.
  */
 function editLastMessage(messageEl) {
-	const msgText = messageEl.querySelector('p')?.textContent.trim() || '';
-	
-	if (!msgText) return;
+    const msgText = messageEl.querySelector('p')?.textContent.trim() || '';
 
-	const chatIndexToEdit = parseInt(messageEl.dataset.chatIndex || '-1', 10);
-	
-	// Trim chat history to keep up to and including this message (remove subsequent responses)
-	if (chatIndexToEdit >= 0 && chatIndexToEdit < chatHistory.length) {
-		chatHistory = chatHistory.slice(0, chatIndexToEdit + 1);
-	}
-	
-	// Remove from DOM all messages AFTER this one (but keep this message visible)
-	const allMessages = Array.from(document.querySelectorAll('.message'));
-	const messageIndex = allMessages.indexOf(messageEl);
-	
-	if (messageIndex !== -1) {
-		const messagesToRemove = allMessages.slice(messageIndex + 1);
-		messagesToRemove.forEach(msg => msg.remove());
-	}
-	
-	// Mark this message as being edited visually
-	messageEl.classList.add('editing');
-	currentEditingMessageEl = messageEl;
-	
-	// Populate the input textarea with the original message
-	userInput.value = msgText;
-	userInput.style.height = 'auto';
-	userInput.style.height = userInput.scrollHeight + 'px';
-	
-	// Focus on the input and scroll to it
-	userInput.focus();
-	const inputArea = document.querySelector('.message-input');
-	if (inputArea) {
-		inputArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-	}
+    if (!msgText) return;
+
+    const chatIndexToEdit = parseInt(messageEl.dataset.chatIndex || '-1', 10);
+
+    // Trim chat history to keep up to and including this message (remove subsequent responses)
+    if (chatIndexToEdit >= 0 && chatIndexToEdit < chatHistory.length) {
+        chatHistory = chatHistory.slice(0, chatIndexToEdit + 1);
+    }
+
+    // Remove from DOM all messages AFTER this one (but keep this message visible)
+    const allMessages = Array.from(document.querySelectorAll('.message'));
+    const messageIndex = allMessages.indexOf(messageEl);
+
+    if (messageIndex !== -1) {
+        const messagesToRemove = allMessages.slice(messageIndex + 1);
+        messagesToRemove.forEach(msg => msg.remove());
+    }
+
+    // Mark this message as being edited visually
+    messageEl.classList.add('editing');
+    currentEditingMessageEl = messageEl;
+
+    // Populate the input textarea with the original message
+    userInput.value = msgText;
+    userInput.style.height = 'auto';
+    userInput.style.height = userInput.scrollHeight + 'px';
+
+    // Focus on the input and scroll to it
+    userInput.focus();
+    const inputArea = document.querySelector('.message-input');
+    if (inputArea) {
+        inputArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 }
 
 /** Attach copy buttons to any existing static messages on the page */
 function attachCopyButtonsToExistingMessages() {
-	const messages = document.querySelectorAll('.message');
-	messages.forEach(attachCopyButton);
+    const messages = document.querySelectorAll('.message');
+    messages.forEach(attachCopyButton);
 }
 
 function consumeSseEvents(buffer) {
-	let normalized = buffer.replace(/\r/g, "");
-	const events = [];
-	let eventEndIndex;
-	while ((eventEndIndex = normalized.indexOf("\n\n")) !== -1) {
-		const rawEvent = normalized.slice(0, eventEndIndex);
-		normalized = normalized.slice(eventEndIndex + 2);
+    let normalized = buffer.replace(/\r/g, "");
+    const events = [];
+    let eventEndIndex;
+    while ((eventEndIndex = normalized.indexOf("\n\n")) !== -1) {
+        const rawEvent = normalized.slice(0, eventEndIndex);
+        normalized = normalized.slice(eventEndIndex + 2);
 
-		const lines = rawEvent.split("\n");
-		const dataLines = [];
-		for (const line of lines) {
-			if (line.startsWith("data:")) {
-				dataLines.push(line.slice("data:".length).trimStart());
-			}
-		}
-		if (dataLines.length === 0) continue;
-		events.push(dataLines.join("\n"));
-	}
-	return { events, buffer: normalized };
+        const lines = rawEvent.split("\n");
+        const dataLines = [];
+        for (const line of lines) {
+            if (line.startsWith("data:")) {
+                dataLines.push(line.slice("data:".length).trimStart());
+            }
+        }
+        if (dataLines.length === 0) continue;
+        events.push(dataLines.join("\n"));
+    }
+    return { events, buffer: normalized };
 }
 
 // Attach copy buttons to any messages already present on load

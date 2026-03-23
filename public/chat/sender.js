@@ -186,7 +186,7 @@ function handleSendMessageError(error, message) {
 
     let errorMessage = "Sorry, there was an error processing your request.";
     if (error.name === "AbortError") {
-        errorMessage = "30 second timeout reached, aborting request.";
+        errorMessage = "60 second timeout reached, aborting request.";
     }
 
     const currentRetries = (state.retryTracker.get(message) || 0) + 1;
