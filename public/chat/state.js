@@ -5,6 +5,10 @@
 const STORAGE_KEY = "nasaq_sessions";
 const CURRENT_CHAT_KEY = "nasaq_current_chat";
 
+// Use sessionStorage so chat history is cleared when the tab/browser is closed.
+// This prevents persistence across builds and new deployments.
+const storage = window.sessionStorage;
+
 function createDefaultAssistantMessage() {
     return {
         role: "assistant",
@@ -34,7 +38,7 @@ export const state = {
 
 export function loadSessionsFromStorage() {
     try {
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+        const saved = JSON.parse(storage.getItem(STORAGE_KEY) || "null");
         if (saved && typeof saved === "object") {
             state.allChats = saved;
         }
@@ -43,27 +47,30 @@ export function loadSessionsFromStorage() {
         state.allChats = {};
     }
 
-    const savedChatId = localStorage.getItem(CURRENT_CHAT_KEY);
+    const savedChatId = storage.getItem(CURRENT_CHAT_KEY);
     if (savedChatId && state.allChats[savedChatId]) {
         state.currentChatId = savedChatId;
     }
 }
 
 export function saveSessionsToStorage() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.allChats));
+    storage.setItem(STORAGE_KEY, JSON.stringify(state.allChats));
     if (state.currentChatId) {
-        localStorage.setItem(CURRENT_CHAT_KEY, state.currentChatId);
+        storage.setItem(CURRENT_CHAT_KEY, state.currentChatId);
     }
 }
 
 export function initChats() {
-    loadSessionsFromStorage();
+    // Clear prior session cache on load to avoid carrying old data across browser restarts.
+    storage.removeItem(STORAGE_KEY);
+    storage.removeItem(CURRENT_CHAT_KEY);
 
-    if (!state.currentChatId || !state.allChats[state.currentChatId]) {
-        const newChat = createChatObject("New Chat");
-        state.allChats[newChat.id] = newChat;
-        state.currentChatId = newChat.id;
-    }
+    state.allChats = {};
+    state.currentChatId = null;
+
+    const newChat = createChatObject("New Chat");
+    state.allChats[newChat.id] = newChat;
+    state.currentChatId = newChat.id;
 
     selectChat(state.currentChatId);
     saveSessionsToStorage();
@@ -79,10 +86,16 @@ export function selectChat(chatId) {
 }
 
 export function createNewChat(title = "New Chat") {
+    // Ensure current unsaved conversation is not kept as an active open chat.
+    // Start fresh state for the new session.
     const chat = createChatObject(title);
     state.allChats[chat.id] = chat;
     state.currentChatId = chat.id;
     state.chatHistory = [...chat.messages];
+    state.currentEditingMessageEl = null;
+    state.isProcessing = false;
+    state.retryTracker.clear();
+
     saveSessionsToStorage();
     return chat.id;
 }

@@ -46,3 +46,6 @@ index.js (orchestrator)
 - `state.js` tracks `createdAt` and `updatedAt` per chat session
 - `ui.js` sorts sidebar `state.allChats` by `updatedAt` (newest first)
 - Sidebar now shows only existing saved chats, with `No chats available yet.` if none
+- `state.js` uses `sessionStorage` (not `localStorage`) so history is reset when the browser/tab is closed
+- `initChats()` clears sessionStorage and starts a fresh chat session on app startup
+- `createNewChat()` resets current state and starts a clean chat if user starts a new session
