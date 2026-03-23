@@ -1,5 +1,6 @@
 {
 	"name": "llm-chat-app-template",
+	"type": "module",
 	"description": "A simple chat application powered by Cloudflare Workers AI",
 	"cloudflare": {
 		"label": "LLM Chat App",

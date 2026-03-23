@@ -25,11 +25,7 @@
 		<aside class="sidebar">
 			<button class="new-chat-btn">+ New Chat</button>
 			<h2>CHAT HISTORY</h2>
-			<ul class="history-list">
-				<li><a href="#">Topic 1: PTO</a></li>
-				<li><a href="#">Topic 2: Overtime</a></li>
-				<li><a href="#">Topic 3: Lunch break</a></li>
-			</ul>
+			<ul class="history-list"></ul>
 		</aside>
 
 		<main class="chat-area">
@@ -110,12 +106,13 @@
 				</div>
 			</div>
 			<div class="modal-actions">
-				<button onclick="document.getElementById('rate-limit-modal').style.display='none'" class="modal-btn primary">OK</button>
+				<button onclick="document.getElementById('rate-limit-modal').style.display='none'"
+					class="modal-btn primary">OK</button>
 			</div>
 		</div>
 	</div>
-	
-	<script src="chat.js"></script>
+
+	<script type="module" src="chat/index.js"></script>
 
 </body>
 
