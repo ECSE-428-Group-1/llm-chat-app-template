@@ -93,14 +93,34 @@ body {
 
 .history-list li {
     margin-bottom: 0;
+    position: relative;
 }
 
 .history-list a {
     display: block;
     /* Makes the whole area clickable */
-    padding: 0.8rem 1rem;
+    padding: 0.8rem 2.5rem 0.8rem 1rem;
     color: var(--text-main);
     text-decoration: none;
+}
+
+.delete-chat-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 2px 4px;
+    transition: color 0.2s;
+}
+
+.delete-chat-btn:hover {
+    color: white;
 }
 
 .history-list li.active a,

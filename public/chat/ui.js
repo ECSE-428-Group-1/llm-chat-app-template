@@ -3,7 +3,7 @@
  */
 
 import { dom, getChatArea } from "./dom.js";
-import { state, selectChat, saveSessionsToStorage, currentChatHasUserMessage, isCurrentChatEmpty } from "./state.js";
+import { state, selectChat, saveSessionsToStorage, currentChatHasUserMessage, isCurrentChatEmpty, deleteChat } from "./state.js";
 
 export function addMessageToChat(
     role,
@@ -214,7 +214,21 @@ export function renderChatHistorySidebar() {
             renderChatHistorySidebar();
         });
 
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "delete-chat-btn";
+        deleteBtn.textContent = "×";
+        deleteBtn.title = "Delete chat";
+        deleteBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const wasActive = chat.id === state.currentChatId;
+            deleteChat(chat.id);
+            renderChatHistorySidebar();
+            if (wasActive) renderCurrentChat();
+        });
+
         item.appendChild(link);
+        item.appendChild(deleteBtn);
         historyList.appendChild(item);
     });
 }
