@@ -79,6 +79,14 @@ export function initChats() {
 export function selectChat(chatId) {
     if (!chatId || !state.allChats[chatId]) return false;
 
+    // If switching away from an empty chat, delete it
+    if (state.currentChatId && state.currentChatId !== chatId) {
+        const current = state.allChats[state.currentChatId];
+        if (current && !current.messages.some(m => m.role === 'user')) {
+            delete state.allChats[state.currentChatId];
+        }
+    }
+
     state.currentChatId = chatId;
     state.chatHistory = [...state.allChats[chatId].messages];
     localStorage.setItem(CURRENT_CHAT_KEY, chatId);
