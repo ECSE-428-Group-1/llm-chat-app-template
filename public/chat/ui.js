@@ -3,7 +3,14 @@
  */
 
 import { dom, getChatArea } from "./dom.js";
-import { state, selectChat, saveSessionsToStorage, currentChatHasUserMessage, isCurrentChatEmpty, deleteChat } from "./state.js";
+import {
+    state,
+    selectChat,
+    saveSessionsToStorage,
+    isCurrentChatEmpty,
+    deleteChat,
+    applyChatOrderToUpdatedAt,
+} from "./state.js";
 
 export function addMessageToChat(
     role,
@@ -174,6 +181,22 @@ export function renderChatHistorySidebar() {
             return bt.localeCompare(at);
         });
 
+    const reorderChats = (sourceChatId, targetChatId) => {
+        if (!sourceChatId || !targetChatId || sourceChatId === targetChatId) return;
+
+        const orderedChatIds = chats.map((chat) => chat.id);
+        const sourceIndex = orderedChatIds.indexOf(sourceChatId);
+        const targetIndex = orderedChatIds.indexOf(targetChatId);
+
+        if (sourceIndex === -1 || targetIndex === -1) return;
+
+        const [movedChatId] = orderedChatIds.splice(sourceIndex, 1);
+        orderedChatIds.splice(targetIndex, 0, movedChatId);
+
+        applyChatOrderToUpdatedAt(orderedChatIds);
+        renderChatHistorySidebar();
+    };
+
     if (chats.length === 0) {
         const empty = document.createElement("li");
         empty.className = "history-empty";
@@ -182,13 +205,55 @@ export function renderChatHistorySidebar() {
         return;
     }
 
+    let draggedChatId = null;
+
     chats.forEach((chat) => {
         const item = document.createElement("li");
         item.className = "history-item";
+        item.draggable = true;
+        item.dataset.chatId = chat.id;
         if (chat.id === state.currentChatId) {
             item.classList.add("active");
             item.classList.add("active-chat");
         }
+
+        item.addEventListener("dragstart", (e) => {
+            draggedChatId = chat.id;
+            item.classList.add("dragging");
+            if (e.dataTransfer) {
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData("text/plain", chat.id);
+            }
+        });
+
+        item.addEventListener("dragend", () => {
+            draggedChatId = null;
+            item.classList.remove("dragging");
+            historyList
+                .querySelectorAll(".history-item.drop-target")
+                .forEach((el) => el.classList.remove("drop-target"));
+        });
+
+        item.addEventListener("dragover", (e) => {
+            if (!draggedChatId || draggedChatId === chat.id) return;
+            e.preventDefault();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+            historyList
+                .querySelectorAll(".history-item.drop-target")
+                .forEach((el) => el.classList.remove("drop-target"));
+            item.classList.add("drop-target");
+        });
+
+        item.addEventListener("dragleave", () => {
+            item.classList.remove("drop-target");
+        });
+
+        item.addEventListener("drop", (e) => {
+            e.preventDefault();
+            item.classList.remove("drop-target");
+            const sourceChatId = draggedChatId || e.dataTransfer?.getData("text/plain") || "";
+            reorderChats(sourceChatId, chat.id);
+        });
 
         const link = document.createElement("a");
         link.href = "#";

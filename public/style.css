@@ -96,6 +96,20 @@ body {
     position: relative;
 }
 
+.history-item {
+    cursor: grab;
+}
+
+.history-item.dragging {
+    opacity: 0.55;
+    cursor: grabbing;
+}
+
+.history-item.drop-target a {
+    outline: 2px dashed rgba(255, 255, 255, 0.45);
+    outline-offset: -2px;
+}
+
 .history-list a {
     display: block;
     /* Makes the whole area clickable */
@@ -142,16 +156,6 @@ body {
 
 .toast-message.fade-out {
     opacity: 0;
-}
-
-text-decoration: none;
-/* Remove the underline */
-font-size: 1rem;
-background-color: rgba(255, 255, 255, 0.05);
-/* Subtle background */
-border-radius: 8px;
-transition: all 0.2s ease;
-border: 1px solid transparent;
 }
 
 /* Hover state the button lights up */

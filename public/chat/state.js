@@ -117,6 +117,35 @@ export function saveCurrentChat() {
     saveSessionsToStorage();
 }
 
+export function applyChatOrderToUpdatedAt(orderedChatIds) {
+    if (!Array.isArray(orderedChatIds) || orderedChatIds.length === 0) return;
+
+    const existingChatIds = Object.keys(state.allChats);
+    if (existingChatIds.length === 0) return;
+
+    const seen = new Set();
+    const orderedValidIds = [];
+
+    for (const chatId of orderedChatIds) {
+        if (!state.allChats[chatId] || seen.has(chatId)) continue;
+        seen.add(chatId);
+        orderedValidIds.push(chatId);
+    }
+
+    for (const chatId of existingChatIds) {
+        if (!seen.has(chatId)) {
+            orderedValidIds.push(chatId);
+        }
+    }
+
+    const baseTime = Date.now();
+    orderedValidIds.forEach((chatId, index) => {
+        state.allChats[chatId].updatedAt = new Date(baseTime - index).toISOString();
+    });
+
+    saveSessionsToStorage();
+}
+
 export function currentChatHasUserMessage() {
     return state.chatHistory.some((msg) => msg.role === "user");
 }
