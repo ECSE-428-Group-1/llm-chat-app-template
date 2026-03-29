@@ -117,6 +117,25 @@ export function isCurrentChatEmpty() {
     return !currentChatHasUserMessage();
 }
 
+export function deleteChat(chatId) {
+    if (!state.allChats[chatId]) return;
+    delete state.allChats[chatId];
+
+    if (state.currentChatId === chatId) {
+        const remaining = Object.keys(state.allChats);
+        if (remaining.length > 0) {
+            selectChat(remaining[0]);
+        } else {
+            const newChat = createChatObject("New Chat");
+            state.allChats[newChat.id] = newChat;
+            state.currentChatId = newChat.id;
+            state.chatHistory = [...newChat.messages];
+        }
+    }
+
+    saveSessionsToStorage();
+}
+
 export function resetSessionState() {
     const initial = createDefaultAssistantMessage();
     state.chatHistory = [initial];
