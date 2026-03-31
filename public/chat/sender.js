@@ -2,14 +2,10 @@
  * Message sending and API communication
  */
 
+import { marked } from "https://esm.sh/marked";
 import { dom } from "./dom.js";
 import { state, saveCurrentChat } from "./state.js";
 import { checkAgreement } from "./agreement.js";
-import {
-  updateAndSetToken,
-  getSessionToken,
-  hasSessionToken,
-} from "./session.js";
 import {
   addMessageToChat,
   showTypingIndicator,
@@ -18,7 +14,9 @@ import {
   createAssistantMessageElement,
   scrollToBottom,
 } from "./ui.js";
-import { consumeSseEvents, parseStreamContent } from "./sse.js";
+
+const DISCORD_BOT_URL = "https://scrum.yun.ng/chat";
+const FAKE_STREAM_DELAY_MS = 80;
 
 const PERSONAL_INFO_REGEX = {
   Email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z]{2,}\b/gi,
@@ -32,6 +30,7 @@ export async function sendMessage(isRetry = false, retryQuestion = null) {
   if (!checkAgreement()) return;
 
   const message = isRetry ? retryQuestion : dom.userInput.value.trim();
+
   const contains = Object.entries(PERSONAL_INFO_REGEX)
     .filter(([_, regex]) => regex.test(message))
     .map(([key, _]) => key);
@@ -60,19 +59,6 @@ export async function sendMessage(isRetry = false, retryQuestion = null) {
     return;
   }
 
-  if (!hasSessionToken()) {
-    try {
-      await updateAndSetToken();
-    } catch (error) {
-      console.error("Error getting session token:", error);
-      addMessageToChat(
-        "assistant",
-        "Sorry, there was an error initializing the chat session.",
-      );
-      return;
-    }
-  }
-
   if (message === "" || state.isProcessing) return;
 
   state.isProcessing = true;
@@ -95,41 +81,27 @@ export async function sendMessage(isRetry = false, retryQuestion = null) {
     }
 
     const assistantMessageEl = createAssistantMessageElement();
-    const assistantTextEl = assistantMessageEl.querySelector("p");
+    const assistantTextEl = assistantMessageEl.querySelector(".content");
 
     scrollToBottom();
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-    let response = await fetch("/api/chat", {
+    const response = await fetch(DISCORD_BOT_URL, {
       method: "POST",
       headers: {
+        "Authorization": "MT2mtLuWi3IB0sgVPeQlSGqS2apsj3J6",
         "Content-Type": "application/json",
-        "Session-Token": getSessionToken(),
       },
       signal: controller.signal,
-      body: JSON.stringify({ messages: state.chatHistory }),
+      body: JSON.stringify({
+        messages: state.chatHistory.slice(0, -1),
+        prompt: message,
+      }),
     });
 
     clearTimeout(timeoutId);
-
-    if (response.status === 401 || response.status === 500) {
-      await updateAndSetToken();
-      const retryController = new AbortController();
-      const retryTimeoutId = setTimeout(() => retryController.abort(), 30000);
-
-      response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Session-Token": getSessionToken(),
-        },
-        signal: retryController.signal,
-        body: JSON.stringify({ messages: state.chatHistory }),
-      });
-      clearTimeout(retryTimeoutId);
-    }
 
     if (!response.ok) {
       throw new Error("Failed to get response");
@@ -138,7 +110,7 @@ export async function sendMessage(isRetry = false, retryQuestion = null) {
       throw new Error("Response body is null");
     }
 
-    await processStreamResponse(
+    await processDiscordStreamResponse(
       response,
       assistantMessageEl,
       assistantTextEl,
@@ -155,7 +127,7 @@ export async function sendMessage(isRetry = false, retryQuestion = null) {
   }
 }
 
-async function processStreamResponse(
+async function processDiscordStreamResponse(
   response,
   assistantMessageEl,
   assistantTextEl,
@@ -163,65 +135,70 @@ async function processStreamResponse(
 ) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
-  let responseText = "";
-  let buffer = "";
+  let raw = "";
 
-  const flushAssistantText = () => {
-    assistantTextEl.textContent = responseText;
-    scrollToBottom();
-  };
-
-  let sawDone = false;
+  // Collect full response body
   while (true) {
     const { done, value } = await reader.read();
-
-    if (done) {
-      const parsed = consumeSseEvents(buffer + "\n\n");
-      for (const data of parsed.events) {
-        if (data === "[DONE]") break;
-        try {
-          const jsonData = JSON.parse(data);
-          const content = parseStreamContent(jsonData);
-          if (content) {
-            responseText += content;
-            flushAssistantText();
-          }
-        } catch (e) {
-          console.error("Error parsing SSE data as JSON:", e, data);
-        }
-      }
-      break;
-    }
-
-    buffer += decoder.decode(value, { stream: true });
-    const parsed = consumeSseEvents(buffer);
-    buffer = parsed.buffer;
-
-    for (const data of parsed.events) {
-      if (data === "[DONE]") {
-        sawDone = true;
-        buffer = "";
-        break;
-      }
-      try {
-        const jsonData = JSON.parse(data);
-        const content = parseStreamContent(jsonData);
-        if (content) {
-          responseText += content;
-          flushAssistantText();
-        }
-      } catch (e) {
-        console.error("Error parsing SSE data as JSON:", e, data);
-      }
-    }
-    if (sawDone) break;
+    if (done) break;
+    raw += decoder.decode(value, { stream: true });
   }
 
-  if (responseText.length > 0) {
-    state.chatHistory.push({ role: "assistant", content: responseText });
-    saveCurrentChat();
-    state.retryTracker.delete(originalMessage);
+  // Parse newline-delimited JSON and find the "done" event
+  let lastMessageContent = "";
+  for (const line of raw.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      const json = JSON.parse(trimmed);
+      if (json.event === "done" && json.data?.response) {
+        lastMessageContent = json.data.response;
+      }
+    } catch (e) {
+      // skip non-JSON lines
+    }
   }
+
+  if (!lastMessageContent) return;
+
+  // Tokenize into words and newlines, then display word-by-word via marked
+  const tokens = [];
+  for (const [li, line] of lastMessageContent.split("\n").entries()) {
+    if (li > 0) tokens.push("\n");
+    for (const word of line.split(" ").filter((w) => w !== "")) {
+      tokens.push(word);
+    }
+  }
+  await new Promise((resolve) => {
+    const shown = [];
+    let i = 0;
+    let firstOnLine = true;
+    function typeNextToken() {
+      if (i >= tokens.length) {
+        resolve();
+        return;
+      }
+      const token = tokens[i++];
+      if (token === "\n") {
+        shown.push("\n");
+        firstOnLine = true;
+        assistantTextEl.innerHTML = marked.parse(shown.join(""));
+        setTimeout(typeNextToken, 0);
+      } else {
+        if (!firstOnLine) shown.push(" ");
+        shown.push(token);
+        firstOnLine = false;
+        assistantTextEl.innerHTML = marked.parse(shown.join(""));
+        scrollToBottom();
+        setTimeout(typeNextToken, FAKE_STREAM_DELAY_MS);
+      }
+    }
+    typeNextToken();
+  });
+
+  state.chatHistory.push({ role: "assistant", content: lastMessageContent });
+  saveCurrentChat();
+  state.retryTracker.delete(originalMessage);
 }
 
 function handleSendMessageError(error, message) {

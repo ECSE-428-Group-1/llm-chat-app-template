@@ -66,7 +66,7 @@ export function attachCopyButton(messageEl) {
 
     btn.addEventListener("click", async (e) => {
         e.stopPropagation();
-        const p = messageEl.querySelector("p");
+        const p = messageEl.querySelector(".content") || messageEl.querySelector("p");
         const text = p ? p.textContent.trim() : "";
         try {
             await navigator.clipboard.writeText(text);
@@ -344,7 +344,7 @@ export function clearErrorBubble() {
 export function createAssistantMessageElement() {
     const assistantMessageEl = document.createElement("div");
     assistantMessageEl.className = "message assistant-message";
-    assistantMessageEl.innerHTML = "<p></p>";
+    assistantMessageEl.innerHTML = '<div class="content"></div>';
     assistantMessageEl.dataset.chatIndex = state.chatHistory.length;
     dom.chatMessages.appendChild(assistantMessageEl);
     attachCopyButton(assistantMessageEl);

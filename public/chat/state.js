@@ -12,7 +12,7 @@ const storage = window.sessionStorage;
 function createDefaultAssistantMessage() {
     return {
         role: "assistant",
-        content: "Hello! I'm an LLM chat app powered by Cloudflare Workers AI. How can I help you today?",
+        content: "Hello! I'm an AI assistant to answer your labor relations questions. How can I help you today?",
     };
 }
 

@@ -248,6 +248,12 @@ body {
     /* Gives it a "tail" */
 }
 
+.assistant-message .content ol,
+.assistant-message .content ul {
+    padding-left: 1.0rem;
+    margin-left: 0.5rem;
+}
+
 .message p {
     margin-bottom: 0.1rem;
 }
