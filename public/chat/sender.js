@@ -16,7 +16,7 @@ import {
 } from "./ui.js";
 
 const DISCORD_BOT_URL = "https://scrum.yun.ng/chat";
-const FAKE_STREAM_DELAY_MS = 80;
+const FAKE_STREAM_DELAY_MS = 40;
 
 const PERSONAL_INFO_REGEX = {
   Email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z]{2,}\b/gi,
@@ -91,7 +91,7 @@ export async function sendMessage(isRetry = false, retryQuestion = null) {
     const response = await fetch(DISCORD_BOT_URL, {
       method: "POST",
       headers: {
-        "Authorization": "MT2mtLuWi3IB0sgVPeQlSGqS2apsj3J6",
+        Authorization: "MT2mtLuWi3IB0sgVPeQlSGqS2apsj3J6",
         "Content-Type": "application/json",
       },
       signal: controller.signal,
@@ -141,7 +141,23 @@ async function processDiscordStreamResponse(
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    raw += decoder.decode(value, { stream: true });
+    const chunk = decoder.decode(value, { stream: true });
+    raw += chunk;
+    try {
+      const subchunks = chunk.split("\n").filter((line) => line.trim());
+      const text = subchunks
+        .map((line) => {
+          try {
+            const json = JSON.parse(line);
+            return typeof json.data === "string" ? json.data : "";
+          } catch {
+            return "";
+          }
+        })
+        .filter((part) => part.trim())
+        .join("\n\n");
+      assistantTextEl.innerHTML = `<div style="font-style: italic;">${marked.parse(text)}</div>`;
+    } catch {}
   }
 
   // Parse newline-delimited JSON and find the "done" event
